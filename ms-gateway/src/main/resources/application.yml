@@ -1,0 +1,11 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ms-gateway
+
+logging:
+  level:
+    org.springframework.web.servlet: DEBUG
+    org.springframework.cloud.gateway: TRACE

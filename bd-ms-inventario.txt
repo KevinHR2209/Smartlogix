@@ -1,0 +1,28 @@
+CREATE TABLE "producto" (
+  "id_producto" bigserial PRIMARY KEY,
+  "sku" varchar(50) UNIQUE,
+  "nombre" varchar(150),
+  "descripcion" text,
+  "precio_actual" int,
+  "peso_gramos" int,
+  "dimensiones" varchar(50),
+  "estado" varchar(50)
+);
+
+CREATE TABLE "bodega" (
+  "id_bodega" serial PRIMARY KEY,
+  "nombre" varchar(100),
+  "direccion_fisica" varchar(200)
+);
+
+CREATE TABLE "producto_bodega" (
+  "id_inventario" bigserial PRIMARY KEY,
+  "id_bodega" int,
+  "id_producto" bigint,
+  "stock_disponible" int,
+  "stock_reservado" int
+);
+
+-- Claves foráneas internas del MS Inventario
+ALTER TABLE "producto_bodega" ADD FOREIGN KEY ("id_producto") REFERENCES "producto" ("id_producto") DEFERRABLE INITIALLY IMMEDIATE;
+ALTER TABLE "producto_bodega" ADD FOREIGN KEY ("id_bodega") REFERENCES "bodega" ("id_bodega") DEFERRABLE INITIALLY IMMEDIATE;

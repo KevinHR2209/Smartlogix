@@ -1,0 +1,19 @@
+version: '3.8'
+
+services:
+  postgres_smartlogix:
+    image: postgres:15-alpine
+    container_name: smartlogix-db
+    restart: always
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=admin
+      - POSTGRES_MULTIPLE_DATABASES=ms_clientes_db,ms_inventario_db,ms_ventas_db,ms_logistica_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init-multiple-dbs.sh:/docker-entrypoint-initdb.d/init-multiple-dbs.sh
+
+volumes:
+  postgres_data:
