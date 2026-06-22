@@ -1,20 +1,21 @@
 package com.smartlogix.mslogistica.service;
 
-import com.smartlogix.mslogistica.client.VentasClient;
 import com.smartlogix.mslogistica.model.Despacho;
 import com.smartlogix.mslogistica.model.Transportista;
 import com.smartlogix.mslogistica.repository.DespachoRepository;
 import com.smartlogix.mslogistica.repository.TransportistaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.Optional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -22,44 +23,107 @@ class LogisticaServiceTest {
 
     @Mock
     private DespachoRepository despachoRepository;
+
     @Mock
     private TransportistaRepository transportistaRepository;
-    @Mock
-    private VentasClient ventasClient;
 
     @InjectMocks
     private DespachoService despachoService;
 
-    @Test
-    void crear_guardaDespachoCorrectamente() {
-        Despacho d = new Despacho();
-        d.setIdPedido(1L);
-        doNothing().when(ventasClient).validarPedido(1L);
-        when(despachoRepository.save(any(Despacho.class))).thenReturn(d);
+    private Despacho despacho;
+    private Transportista transportista;
 
-        Despacho result = despachoService.crear(d);
-        assertNotNull(result);
-        verify(despachoRepository).save(d);
+    @BeforeEach
+    void setUp() {
+        transportista = new Transportista();
+        transportista.setIdTransportista(1L);
+
+        despacho = Despacho.builder()
+                .idDespacho(1L)
+                .idPedido(10L)
+                .estadoDespacho("PENDIENTE")
+                .direccionEntrega("Av. Siempre Viva 742")
+                .comunaEntrega("Santiago")
+                .fechaCreacion(OffsetDateTime.now())
+                .build();
     }
 
     @Test
-    void asignarTransportista_asignaCorrectamente() {
-        Despacho d = new Despacho();
-        d.setIdDespacho(1L);
-        Transportista t = new Transportista();
-        t.setIdTransportista(2L);
+    void listar_debeRetornarListaDeDespachos() {
+        when(despachoRepository.findAll()).thenReturn(List.of(despacho));
 
-        when(despachoRepository.findById(1L)).thenReturn(Optional.of(d));
-        when(transportistaRepository.findById(2L)).thenReturn(Optional.of(t));
-        when(despachoRepository.save(any(Despacho.class))).thenReturn(d);
+        List<Despacho> resultado = despachoService.listar();
 
-        Despacho result = despachoService.asignarTransportista(1L, 2L);
-        assertEquals(t, result.getTransportista());
+        assertThat(resultado).hasSize(1);
+        assertThat(resultado.get(0).getIdPedido()).isEqualTo(10L);
+        verify(despachoRepository).findAll();
     }
 
     @Test
-    void cambiarEstado_lanzaExcepcionSiDespachoNoExiste() {
+    void buscarPorId_cuandoExiste_debeRetornarDespacho() {
+        when(despachoRepository.findById(1L)).thenReturn(Optional.of(despacho));
+
+        Despacho resultado = despachoService.buscarPorId(1L);
+
+        assertThat(resultado.getIdDespacho()).isEqualTo(1L);
+        assertThat(resultado.getEstadoDespacho()).isEqualTo("PENDIENTE");
+    }
+
+    @Test
+    void buscarPorId_cuandoNoExiste_debeLanzarExcepcion() {
         when(despachoRepository.findById(99L)).thenReturn(Optional.empty());
-        assertThrows(RuntimeException.class, () -> despachoService.cambiarEstado(99L, "EN_CAMINO"));
+
+        assertThatThrownBy(() -> despachoService.buscarPorId(99L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Despacho no encontrado");
+    }
+
+    @Test
+    void crear_debePersistirYRetornarDespacho() {
+        Despacho nuevo = Despacho.builder()
+                .idPedido(10L)
+                .estadoDespacho("PENDIENTE")
+                .direccionEntrega("Av. Siempre Viva 742")
+                .comunaEntrega("Santiago")
+                .build();
+        when(despachoRepository.save(any(Despacho.class))).thenReturn(despacho);
+
+        Despacho resultado = despachoService.crear(nuevo);
+
+        assertThat(resultado.getIdDespacho()).isEqualTo(1L);
+        verify(despachoRepository).save(nuevo);
+    }
+
+    @Test
+    void cambiarEstado_debeActualizarEstadoDelDespacho() {
+        when(despachoRepository.findById(1L)).thenReturn(Optional.of(despacho));
+        when(despachoRepository.save(any(Despacho.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Despacho resultado = despachoService.cambiarEstado(1L, "EN_RUTA");
+
+        assertThat(resultado.getEstadoDespacho()).isEqualTo("EN_RUTA");
+        verify(despachoRepository).save(despacho);
+    }
+
+    @Test
+    void asignarTransportista_cuandoExisten_debeAsociarCorrectamente() {
+        when(despachoRepository.findById(1L)).thenReturn(Optional.of(despacho));
+        when(transportistaRepository.findById(1L)).thenReturn(Optional.of(transportista));
+        when(despachoRepository.save(any(Despacho.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        Despacho resultado = despachoService.asignarTransportista(1L, 1L);
+
+        assertThat(resultado.getTransportista()).isEqualTo(transportista);
+        verify(despachoRepository).save(despacho);
+    }
+
+    @Test
+    void asignarTransportista_cuandoTransportistaNoExiste_debeLanzarExcepcion() {
+        when(despachoRepository.findById(1L)).thenReturn(Optional.of(despacho));
+        when(transportistaRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> despachoService.asignarTransportista(1L, 99L))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Transportista no encontrado");
     }
 }
