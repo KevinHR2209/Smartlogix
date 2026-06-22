@@ -1,7 +1,6 @@
 spring:
-  autoconfigure:
-    exclude:
-      - org.springframework.cloud.gateway.config.GatewayAutoConfiguration
+  main:
+    web-application-type: reactive
   cloud:
     compatibility-verifier:
       enabled: false
