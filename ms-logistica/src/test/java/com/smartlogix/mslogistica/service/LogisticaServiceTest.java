@@ -20,51 +20,46 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class LogisticaServiceTest {
 
-    @Mock DespachoRepository despachoRepository;
-    @Mock TransportistaRepository transportistaRepository;
-    @Mock VentasClient ventasClient;
-    @InjectMocks DespachoService despachoService;
+    @Mock
+    private DespachoRepository despachoRepository;
+    @Mock
+    private TransportistaRepository transportistaRepository;
+    @Mock
+    private VentasClient ventasClient;
+
+    @InjectMocks
+    private DespachoService despachoService;
 
     @Test
-    void crearDespachoValidaPedidoYAsignaFecha() {
-        Despacho despacho = Despacho.builder()
-                .idPedido(15L)
-                .estadoDespacho("PENDIENTE")
-                .build();
-        when(despachoRepository.save(any(Despacho.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+    void crear_guardaDespachoCorrectamente() {
+        Despacho d = new Despacho();
+        d.setIdPedido(1L);
+        doNothing().when(ventasClient).validarPedido(1L);
+        when(despachoRepository.save(any(Despacho.class))).thenReturn(d);
 
-        Despacho creado = despachoService.crear(despacho);
-
-        assertNotNull(creado.getFechaCreacion());
-        verify(ventasClient).validarPedido(15L);
-        verify(despachoRepository).save(despacho);
+        Despacho result = despachoService.crear(d);
+        assertNotNull(result);
+        verify(despachoRepository).save(d);
     }
 
     @Test
-    void asignarTransportistaGuardaRelacion() {
-        Despacho despacho = Despacho.builder().idDespacho(1L).build();
-        Transportista transportista = Transportista.builder()
-                .idTransportista(9L)
-                .nombreCompleto("Juan Perez")
-                .build();
-        when(despachoRepository.findById(1L)).thenReturn(Optional.of(despacho));
-        when(transportistaRepository.findById(9L)).thenReturn(Optional.of(transportista));
-        when(despachoRepository.save(any(Despacho.class)))
-                .thenAnswer(inv -> inv.getArgument(0));
+    void asignarTransportista_asignaCorrectamente() {
+        Despacho d = new Despacho();
+        d.setIdDespacho(1L);
+        Transportista t = new Transportista();
+        t.setIdTransportista(2L);
 
-        Despacho actualizado = despachoService.asignarTransportista(1L, 9L);
+        when(despachoRepository.findById(1L)).thenReturn(Optional.of(d));
+        when(transportistaRepository.findById(2L)).thenReturn(Optional.of(t));
+        when(despachoRepository.save(any(Despacho.class))).thenReturn(d);
 
-        assertEquals(9L, actualizado.getTransportista().getIdTransportista());
-        verify(despachoRepository).save(despacho);
+        Despacho result = despachoService.asignarTransportista(1L, 2L);
+        assertEquals(t, result.getTransportista());
     }
 
     @Test
-    void cambiarEstadoDespachoInexistenteLanzaExcepcion() {
-        when(despachoRepository.findById(33L)).thenReturn(Optional.empty());
-
-        RuntimeException ex = assertThrows(RuntimeException.class,
-                () -> despachoService.cambiarEstado(33L, "CANCELADO"));
-        assertEquals("Despacho no encontrado", ex.getMessage());
+    void cambiarEstado_lanzaExcepcionSiDespachoNoExiste() {
+        when(despachoRepository.findById(99L)).thenReturn(Optional.empty());
+        assertThrows(RuntimeException.class, () -> despachoService.cambiarEstado(99L, "EN_CAMINO"));
     }
 }

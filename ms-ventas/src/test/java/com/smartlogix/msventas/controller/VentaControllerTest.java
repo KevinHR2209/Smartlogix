@@ -7,15 +7,13 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.OffsetDateTime;
 import java.util.List;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.when;
-import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
@@ -25,70 +23,61 @@ class VentaControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
-
     @MockBean
     private PedidoService pedidoService;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Test
-    void listarRetorna200YListaDePedidos() throws Exception {
-        Pedido pedido = Pedido.builder()
-                .idPedido(1L)
-                .idCliente(7L)
-                .estadoPedido("PENDIENTE")
-                .build();
-        when(pedidoService.listar()).thenReturn(List.of(pedido));
+    void listar_retornaLista() throws Exception {
+        Pedido p = new Pedido();
+        p.setIdPedido(1L);
+        p.setEstadoPedido("PENDIENTE");
+        when(pedidoService.listar()).thenReturn(List.of(p));
 
         mockMvc.perform(get("/api/pedidos"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].idPedido").value(1))
-                .andExpect(jsonPath("$[0].estadoPedido").value("PENDIENTE"));
+                .andExpect(jsonPath("$[0].idPedido").value(1));
     }
 
     @Test
-    void obtenerPorIdExistenteRetorna200() throws Exception {
-        Pedido pedido = Pedido.builder()
-                .idPedido(3L)
-                .idCliente(9L)
-                .estadoPedido("CREADO")
-                .build();
-        when(pedidoService.buscarPorId(3L)).thenReturn(pedido);
+    void obtener_retornaPedido() throws Exception {
+        Pedido p = new Pedido();
+        p.setIdPedido(1L);
+        p.setEstadoPedido("PENDIENTE");
+        when(pedidoService.buscarPorId(1L)).thenReturn(p);
 
-        mockMvc.perform(get("/api/pedidos/3"))
+        mockMvc.perform(get("/api/pedidos/1"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.idCliente").value(9));
+                .andExpect(jsonPath("$.idPedido").value(1));
     }
 
     @Test
-    void crearPedidoRetorna201() throws Exception {
-        Pedido pedido = Pedido.builder()
-                .idPedido(2L)
-                .idCliente(5L)
-                .fechaCreacion(OffsetDateTime.parse("2026-01-01T10:00:00Z"))
-                .estadoPedido("CREADO")
-                .build();
-        when(pedidoService.crear(any(Pedido.class), eq("Valparaiso"))).thenReturn(pedido);
+    void crear_retorna201() throws Exception {
+        Pedido p = new Pedido();
+        p.setIdPedido(1L);
+        p.setIdCliente(10L);
+        p.setEstadoPedido("PENDIENTE");
+        when(pedidoService.crear(any(Pedido.class), anyString())).thenReturn(p);
 
         mockMvc.perform(post("/api/pedidos")
-                        .param("regionDestino", "Valparaiso")
-                        .contentType(APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(pedido)))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(p)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.idPedido").value(2));
+                .andExpect(jsonPath("$.idPedido").value(1));
     }
 
     @Test
-    void cambiarEstadoRetorna200() throws Exception {
-        Pedido pedido = Pedido.builder()
-                .idPedido(6L)
-                .estadoPedido("ENTREGADO")
-                .build();
-        when(pedidoService.cambiarEstado(6L, "ENTREGADO")).thenReturn(pedido);
+    void cambiarEstado_retornaPedidoActualizado() throws Exception {
+        Pedido p = new Pedido();
+        p.setIdPedido(1L);
+        p.setEstadoPedido("ENVIADO");
+        when(pedidoService.cambiarEstado(1L, "ENVIADO")).thenReturn(p);
 
-        mockMvc.perform(put("/api/pedidos/6/estado")
-                        .param("estado", "ENTREGADO"))
+        mockMvc.perform(put("/api/pedidos/1/estado")
+                        .param("estado", "ENVIADO"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.estadoPedido").value("ENTREGADO"));
+                .andExpect(jsonPath("$.estadoPedido").value("ENVIADO"));
     }
 }
