@@ -4,8 +4,9 @@ server:
 spring:
   application:
     name: ms-gateway
+  main:
+    web-application-type: reactive
 
 logging:
   level:
-    org.springframework.web.servlet: DEBUG
-    org.springframework.cloud.gateway: TRACE
+    org.springframework.cloud.gateway: INFO
